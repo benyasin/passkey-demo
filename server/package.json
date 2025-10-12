@@ -1,0 +1,21 @@
+{
+  "name": "passkey-demo-server",
+  "version": "1.0.0",
+  "description": "Passkey Demo Backend Server",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "@simplewebauthn/server": "^8.3.6",
+    "uuid": "^9.0.1",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "keywords": ["passkey", "webauthn", "demo"],
+  "author": "Passkey Demo",
+  "license": "MIT"
+}
