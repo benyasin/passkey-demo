@@ -54,7 +54,7 @@ app.post('/webauthn/registration/options', async (req, res) => {
     authenticatorSelection: {
       residentKey: 'required',
       userVerification: 'required',
-      authenticatorAttachment: 'platform', // iOS/Android 平台认证器
+      // 移除 authenticatorAttachment 限制，让系统自动选择
     },
     excludeCredentials: user.credentials.map(cred => ({
       id: Buffer.from(cred.credentialID, 'base64url'),

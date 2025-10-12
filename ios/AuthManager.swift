@@ -11,6 +11,36 @@ final class AuthManager: NSObject {
     private var session: ASWebAuthenticationSession?
     private var pendingState: String?
     private var completionHandler: ((Result<AuthResult, AuthError>) -> Void)?
+    private var registrationCompletionHandler: ((Result<Void, AuthError>) -> Void)?
+    
+    // 页面模式配置
+    enum PageMode {
+        case transparent  // 透明模式
+        case branded     // 品牌模式
+        
+        var pageName: String {
+            switch self {
+            case .transparent:
+                return "index.html"
+            case .branded:
+                return "branded.html"
+            }
+        }
+    }
+    
+    private var currentPageMode: PageMode = .branded
+    
+    /// 设置页面模式
+    /// - Parameter mode: 页面模式
+    func setPageMode(_ mode: PageMode) {
+        currentPageMode = mode
+    }
+    
+    /// 获取当前页面模式
+    /// - Returns: 当前页面模式
+    func getCurrentPageMode() -> PageMode {
+        return currentPageMode
+    }
 
     // 配置
     private let authBase = "http://localhost:3001"  // 认证服务地址
@@ -59,8 +89,8 @@ final class AuthManager: NSObject {
         pendingState = state
         completionHandler = completion
         
-        // 构建认证 URL，包含用户名和 state 参数
-        let urlStr = "\(authBase)/index.html?username=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username)&state=\(state)"
+        // 构建认证 URL，包含用户名、操作类型和 state 参数
+        let urlStr = "\(authBase)/\(currentPageMode.pageName)?username=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username)&action=login&state=\(state)"
         guard let url = URL(string: urlStr) else {
             completion(.failure(.invalidCallback))
             return
@@ -105,6 +135,63 @@ final class AuthManager: NSObject {
         authSession.start()
         self.session = authSession
     }
+    
+    /// 开始 Passkey 注册流程
+    /// - Parameters:
+    ///   - username: 用户名
+    ///   - completion: 完成回调
+    func startRegistration(username: String, completion: @escaping (Result<Void, AuthError>) -> Void) {
+        // 生成防重放攻击的 state 参数
+        let state = UUID().uuidString
+        pendingState = state
+        registrationCompletionHandler = completion
+        
+        // 构建注册 URL，包含用户名、操作类型和 state 参数
+        let urlStr = "\(authBase)/\(currentPageMode.pageName)?username=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username)&action=register&state=\(state)"
+        guard let url = URL(string: urlStr) else {
+            completion(.failure(.invalidCallback))
+            return
+        }
+
+        print("📝 开始 Passkey 注册流程")
+        print("👤 用户名: \(username)")
+        print("🌐 注册 URL: \(urlStr)")
+
+        // 创建 ASWebAuthenticationSession
+        let authSession = ASWebAuthenticationSession(
+            url: url,
+            callbackURLScheme: callbackScheme
+        ) { [weak self] callbackURL, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("❌ ASWebAuthenticationSession 错误: \(error.localizedDescription)")
+                if let nsError = error as NSError?, nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                    self.registrationCompletionHandler?(.failure(.userCancelled))
+                } else {
+                    self.registrationCompletionHandler?(.failure(.networkError(error)))
+                }
+                return
+            }
+            
+            guard let callbackURL = callbackURL else {
+                print("❌ 没有收到回调 URL")
+                self.registrationCompletionHandler?(.failure(.invalidCallback))
+                return
+            }
+            
+            print("✅ 收到回调 URL: \(callbackURL.absoluteString)")
+            self.handleRegistrationCallback(callbackURL)
+        }
+        
+        // 配置会话
+        authSession.presentationContextProvider = self
+        authSession.prefersEphemeralWebBrowserSession = true  // 使用无痕模式
+        
+        // 开始注册会话
+        authSession.start()
+        self.session = authSession
+    }
 
     /// 处理认证回调
     private func handleCallback(_ callbackURL: URL) {
@@ -141,6 +228,43 @@ final class AuthManager: NSObject {
         
         // 用授权码换取访问令牌
         exchangeCodeForToken(code: code)
+    }
+    
+    /// 处理注册回调
+    private func handleRegistrationCallback(_ callbackURL: URL) {
+        guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
+            print("❌ 无法解析回调 URL")
+            registrationCompletionHandler?(.failure(.invalidCallback))
+            return
+        }
+        
+        // 提取成功标志和 state
+        let success = components.queryItems?.first(where: { $0.name == "success" })?.value
+        let returnedState = components.queryItems?.first(where: { $0.name == "state" })?.value
+        
+        print("🔍 注册回调参数解析:")
+        print("   Success: \(success ?? "nil")")
+        print("   State: \(returnedState ?? "nil")")
+        
+        // 验证 state 防止重放攻击
+        if let pendingState = self.pendingState, let returnedState = returnedState {
+            if pendingState != returnedState {
+                print("❌ State 不匹配，可能存在重放攻击")
+                registrationCompletionHandler?(.failure(.invalidCallback))
+                return
+            }
+        }
+        
+        self.pendingState = nil
+        
+        // 检查注册是否成功
+        if success == "true" {
+            print("✅ 注册成功")
+            registrationCompletionHandler?(.success(()))
+        } else {
+            print("❌ 注册失败")
+            registrationCompletionHandler?(.failure(.invalidResponse))
+        }
     }
 
     /// 用授权码换取访问令牌

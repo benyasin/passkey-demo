@@ -3,160 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Passkey Demo - 无密码登录演示</title>
+    <title>Passkey 认证</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            background: transparent;
             min-height: 100vh;
-            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         .container {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: none; /* 完全隐藏界面 */
         }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-        input[type="text"] {
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
         }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
+        .loading-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 300px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            font-size: 18px;
             font-weight: 600;
-            cursor: pointer;
-            margin: 8px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            color: #1d1d1f;
+            margin-bottom: 8px;
         }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .btn-success {
-            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        }
-        .btn-danger {
-            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-        }
-        #log {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        .loading-subtitle {
             font-size: 14px;
-            line-height: 1.5;
-            max-height: 300px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .status {
-            padding: 10px;
-            border-radius: 6px;
-            margin: 10px 0;
-            font-weight: 600;
-        }
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        .demo-info {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 0 8px 8px 0;
-        }
-        .demo-info h3 {
-            margin-top: 0;
-            color: #1976d2;
+            color: #86868b;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔐 Passkey Demo</h1>
-        
-        <div class="demo-info">
-            <h3>📱 演示说明</h3>
-            <p>这是一个 Passkey 无密码登录演示系统。支持在 iOS Safari 中使用 Face ID/Touch ID 进行安全登录。</p>
-            <p><strong>注意：</strong>请在 iOS Safari 或支持 WebAuthn 的现代浏览器中打开此页面。</p>
-        </div>
-
-        <div class="form-group">
-            <label for="username">用户名：</label>
-            <input type="text" id="username" value="demo_user" placeholder="输入用户名">
-        </div>
-
-        <div style="text-align: center;">
-            <button id="btnReg" class="btn btn-success">📝 注册 Passkey</button>
-            <button id="btnLogin" class="btn">🔑 登录</button>
-            <button id="btnTestToken" class="btn" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">🧪 测试 Token</button>
-        </div>
-
+    <!-- 隐藏的容器，用于逻辑处理 -->
+    <div class="container" style="display: none;">
         <div id="status"></div>
-        <pre id="log"></pre>
+    </div>
+    
+    <!-- 加载遮罩层 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">正在处理认证请求...</div>
+            <div class="loading-subtitle" id="loadingSubtitle">请稍候</div>
+        </div>
     </div>
 
     <script>
         const API = 'http://localhost:3001'; // 后端 API 地址
         
         // 工具函数
-        function log(...args) { 
-            const el = document.getElementById('log'); 
-            el.textContent += args.join(' ') + '\n'; 
+        function updateLoadingUI(text, subtitle = '请稍候') {
+            const loadingText = document.getElementById('loadingText');
+            const loadingSubtitle = document.getElementById('loadingSubtitle');
+            loadingText.textContent = text;
+            loadingSubtitle.textContent = subtitle;
         }
-        
-        function showStatus(message, type = 'info') {
-            const statusEl = document.getElementById('status');
-            statusEl.innerHTML = `<div class="status ${type}">${message}</div>`;
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = 'none';
+        }
+
+        function showLoading(message, subtitle = '请稍候') {
+            updateLoadingUI(message, subtitle);
+        }
+
+        function showSuccess(message) {
+            updateLoadingUI('✅ ' + message, '正在返回应用...');
+            setTimeout(() => {
+                hideLoadingOverlay();
+            }, 1500);
+        }
+
+        function showError(message) {
+            updateLoadingUI('❌ ' + message, '请重试或返回应用');
+            setTimeout(() => {
+                hideLoadingOverlay();
+            }, 3000);
         }
 
         function bufToBase64url(buf) {
@@ -176,32 +129,25 @@
         // 检查 WebAuthn 支持
         function checkWebAuthnSupport() {
             if (!window.PublicKeyCredential) {
-                showStatus('❌ 当前浏览器不支持 WebAuthn/Passkey 功能', 'error');
+                showError('当前浏览器不支持 WebAuthn/Passkey 功能');
                 return false;
             }
             if (!navigator.credentials) {
-                showStatus('❌ 当前浏览器不支持 Credentials API', 'error');
+                showError('当前浏览器不支持 Credentials API');
                 return false;
             }
-            showStatus('✅ 浏览器支持 WebAuthn/Passkey', 'success');
             return true;
         }
 
-        // 注册 Passkey
-        document.getElementById('btnReg').onclick = async () => {
+        // 执行注册流程
+        async function performRegistration(username) {
             if (!checkWebAuthnSupport()) return;
             
-            const username = document.getElementById('username').value.trim();
-            if (!username) {
-                showStatus('❌ 请输入用户名', 'error');
-                return;
-            }
-            
-            showStatus('🔄 开始注册 Passkey...', 'info');
-            log('开始注册', username);
+            showLoading('正在准备注册 Passkey...');
             
             try {
                 // 1. 获取注册选项
+                showLoading('正在获取注册选项...');
                 const resp = await fetch(API + '/webauthn/registration/options', {
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'},
@@ -213,7 +159,6 @@
                 }
                 
                 const opts = await resp.json();
-                log('收到注册选项');
                 
                 // 2. 转换字段格式
                 opts.challenge = base64urlToBuf(opts.challenge);
@@ -225,14 +170,30 @@
                 }
                 
                 // 3. 调用 WebAuthn API 创建凭证
-                log('调用 WebAuthn API 创建凭证...');
-                const attResp = await navigator.credentials.create({ publicKey: opts });
+                showLoading('请使用 Face ID 或 Touch ID 完成注册...');
+                
+                // 添加延迟确保用户看到提示，并确保页面完全加载
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                console.log('准备调用 WebAuthn API 创建凭证，选项:', opts);
+                
+                // 直接调用 WebAuthn API
+                const attResp = await navigator.credentials.create({ 
+                    publicKey: {
+                        ...opts,
+                        timeout: 60000, // 60秒超时
+                        userVerification: 'required'
+                    }
+                });
+                
+                console.log('WebAuthn API 响应:', attResp);
                 if (!attResp) {
-                    showStatus('❌ 用户取消注册', 'error');
+                    showError('用户取消注册');
                     return;
                 }
                 
                 // 4. 转换响应格式
+                showLoading('正在验证注册信息...');
                 const clientDataJSON = bufToBase64url(attResp.response.clientDataJSON);
                 const attestationObject = bufToBase64url(attResp.response.attestationObject);
                 const data = {
@@ -243,43 +204,60 @@
                 };
                 
                 // 5. 提交到后端验证
-                log('提交凭证到后端验证...');
                 const v = await fetch(API + '/webauthn/registration/verify', {
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ username, attResp: data }),
                 }).then(r => r.json());
                 
-                log('注册结果:', JSON.stringify(v, null, 2));
-                
                 if (v.verified) {
-                    showStatus('✅ Passkey 注册成功！', 'success');
+                    showSuccess('Passkey 注册成功！');
+                    
+                    // 延迟后重定向回应用
+                    setTimeout(() => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const state = urlParams.get('state');
+                        if (state) {
+                            window.location.href = `passkeydemo://auth?success=true&state=${state}`;
+                        }
+                    }, 2000);
                 } else {
-                    showStatus('❌ 注册失败', 'error');
+                    showError('注册验证失败');
                 }
                 
             } catch (error) {
                 console.error('注册错误:', error);
-                showStatus(`❌ 注册失败: ${error.message}`, 'error');
-                log('注册错误:', error.message);
+                console.error('错误详情:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                
+                // 提供更友好的错误信息
+                let friendlyMessage = error.message;
+                if (error.message.includes('invalid state')) {
+                    friendlyMessage = '认证器状态无效，请重试';
+                } else if (error.message.includes('not allowed')) {
+                    friendlyMessage = '浏览器不允许此操作，请检查权限设置';
+                } else if (error.message.includes('timeout')) {
+                    friendlyMessage = '操作超时，请重试';
+                }
+                
+                showError(`注册失败: ${friendlyMessage}`);
             }
-        };
+        }
 
-        // 登录
-        document.getElementById('btnLogin').onclick = async () => {
+        // 执行登录流程
+        async function performLogin(username) {
+            console.log('开始登录流程，用户名:', username);
+            
             if (!checkWebAuthnSupport()) return;
             
-            const username = document.getElementById('username').value.trim();
-            if (!username) {
-                showStatus('❌ 请输入用户名', 'error');
-                return;
-            }
-            
-            showStatus('🔄 开始登录...', 'info');
-            log('开始登录', username);
+            showLoading('正在准备登录...');
             
             try {
                 // 1. 获取认证选项
+                console.log('正在获取认证选项...');
                 const resp = await fetch(API + '/webauthn/authentication/options', {
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'},
@@ -291,7 +269,7 @@
                 }
                 
                 const opts = await resp.json();
-                log('收到认证选项');
+                console.log('收到认证选项:', opts);
                 
                 // 2. 转换字段格式
                 opts.challenge = base64urlToBuf(opts.challenge);
@@ -302,10 +280,25 @@
                 }
                 
                 // 3. 调用 WebAuthn API 获取认证
-                log('调用 WebAuthn API 进行认证...');
-                const authResp = await navigator.credentials.get({ publicKey: opts });
+                showLoading('请使用 Face ID 或 Touch ID 完成登录...');
+                
+                // 添加延迟确保用户看到提示，并确保页面完全加载
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                console.log('准备调用 WebAuthn API，选项:', opts);
+                
+                // 直接调用 WebAuthn API
+                const authResp = await navigator.credentials.get({ 
+                    publicKey: {
+                        ...opts,
+                        timeout: 60000, // 60秒超时
+                        userVerification: 'required'
+                    }
+                });
+                
+                console.log('WebAuthn API 响应:', authResp);
                 if (!authResp) {
-                    showStatus('❌ 用户取消登录', 'error');
+                    showError('用户取消登录');
                     return;
                 }
                 
@@ -323,125 +316,78 @@
                 };
                 
                 // 5. 提交到后端验证
-                log('提交认证响应到后端验证...');
                 const v = await fetch(API + '/webauthn/authentication/verify', {
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ username, authResp: data }),
                 }).then(r => r.json());
                 
-                log('登录验证结果:', JSON.stringify(v, null, 2));
-                
                 if (v.verified && v.code) {
-                    showStatus('✅ 登录成功！获得授权码', 'success');
-                    log('获得授权码:', v.code);
+                    showSuccess('登录成功！获得授权码');
                     
-                    // 6. 用授权码换取访问令牌
-                    log('用授权码换取访问令牌...');
-                    const tokenResp = await fetch(API + '/oauth/token', {
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ code: v.code })
-                    });
-                    
-                    if (tokenResp.ok) {
-                        const tokenData = await tokenResp.json();
-                        log('获得访问令牌:', JSON.stringify(tokenData, null, 2));
-                        showStatus('🎉 完整登录流程成功！已获得访问令牌', 'success');
-                        
-                        // 保存令牌到本地存储（演示用）
-                        localStorage.setItem('access_token', tokenData.access_token);
-                        localStorage.setItem('token_type', tokenData.token_type);
-                        localStorage.setItem('expires_in', tokenData.expires_in);
-                        
-                        // 检查是否是从 iOS 应用跳转过来的，如果是则重定向回应用
+                    // 延迟后重定向回应用
+                    setTimeout(() => {
                         const urlParams = new URLSearchParams(window.location.search);
                         const state = urlParams.get('state');
                         if (state) {
-                            log('检测到 iOS 应用跳转，准备重定向...');
-                            // 延迟一下让用户看到成功消息
-                            setTimeout(() => {
-                                const callbackUrl = `passkeydemo://auth?code=${v.code}&state=${state}`;
-                                log('重定向到:', callbackUrl);
-                                window.location.href = callbackUrl;
-                            }, 2000);
+                            window.location.href = `passkeydemo://auth?code=${v.code}&state=${state}`;
                         }
-                        
-                    } else {
-                        const errorText = await tokenResp.text();
-                        showStatus(`❌ 令牌交换失败: ${errorText}`, 'error');
-                        log('令牌交换失败:', errorText);
-                    }
+                    }, 2000);
                 } else {
-                    showStatus('❌ 登录验证失败', 'error');
+                    showError('登录验证失败');
                 }
                 
             } catch (error) {
                 console.error('登录错误:', error);
-                showStatus(`❌ 登录失败: ${error.message}`, 'error');
-                log('登录错误:', error.message);
-            }
-        };
-
-        // 测试 Token
-        document.getElementById('btnTestToken').onclick = async () => {
-            const token = localStorage.getItem('access_token');
-            if (!token) {
-                showStatus('❌ 没有找到访问令牌，请先登录', 'error');
-                return;
-            }
-            
-            showStatus('🔄 测试访问令牌...', 'info');
-            log('测试访问令牌:', token.substring(0, 20) + '...');
-            
-            try {
-                const resp = await fetch(API + '/api/user', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+                console.error('错误详情:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
                 });
                 
-                if (resp.ok) {
-                    const userData = await resp.json();
-                    log('用户信息:', JSON.stringify(userData, null, 2));
-                    showStatus('✅ 令牌有效，获取用户信息成功！', 'success');
-                } else {
-                    const errorText = await resp.text();
-                    showStatus(`❌ 令牌无效: ${errorText}`, 'error');
-                    log('令牌验证失败:', errorText);
+                // 提供更友好的错误信息
+                let friendlyMessage = error.message;
+                if (error.message.includes('invalid state')) {
+                    friendlyMessage = '认证器状态无效，请重试';
+                } else if (error.message.includes('not allowed')) {
+                    friendlyMessage = '浏览器不允许此操作，请检查权限设置';
+                } else if (error.message.includes('timeout')) {
+                    friendlyMessage = '操作超时，请重试';
                 }
-            } catch (error) {
-                console.error('令牌测试错误:', error);
-                showStatus(`❌ 令牌测试失败: ${error.message}`, 'error');
-                log('令牌测试错误:', error.message);
+                
+                showError(`登录失败: ${friendlyMessage}`);
             }
-        };
+        }
 
-        // 页面加载时检查支持情况
+        // 页面加载时自动执行认证流程
         window.addEventListener('load', () => {
-            log('页面加载完成');
-            checkWebAuthnSupport();
-            
-            // 检查是否有已保存的令牌
-            const token = localStorage.getItem('access_token');
-            if (token) {
-                showStatus('ℹ️ 检测到已保存的访问令牌', 'info');
-                log('已保存的令牌:', token.substring(0, 20) + '...');
-            }
-            
-            // 检查 URL 参数，看是否是从 iOS 应用跳转过来的
-            const urlParams = new URLSearchParams(window.location.search);
-            const username = urlParams.get('username');
-            const state = urlParams.get('state');
-            
-            if (username) {
-                document.getElementById('username').value = username;
-                log('从 iOS 应用跳转，用户名:', username);
-                if (state) {
-                    log('State 参数:', state);
+            // 确保页面完全加载后再执行
+            setTimeout(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const username = urlParams.get('username');
+                const action = urlParams.get('action'); // 'register' 或 'login'
+                
+                if (!username) {
+                    showError('缺少用户名参数');
+                    return;
                 }
-            }
+                
+                if (!action) {
+                    showError('缺少操作类型参数');
+                    return;
+                }
+                
+                console.log('开始认证流程:', { username, action });
+                
+                // 根据操作类型执行相应流程
+                if (action === 'register') {
+                    performRegistration(username);
+                } else if (action === 'login') {
+                    performLogin(username);
+                } else {
+                    showError('无效的操作类型');
+                }
+            }, 500); // 延迟500ms确保页面完全加载
         });
     </script>
 </body>

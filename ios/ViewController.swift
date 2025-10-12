@@ -9,6 +9,7 @@ class ViewController: UIViewController {
     private var loginButton: UIButton!
     private var registerButton: UIButton!
     private var logTextView: UITextView!
+    private var pageModeSegmentedControl: UISegmentedControl!
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -46,6 +47,14 @@ class ViewController: UIViewController {
         registerButton.addTarget(self, action: #selector(registerButtonTapped), for: .touchUpInside)
         registerButton.translatesAutoresizingMaskIntoConstraints = false
         
+        // 创建页面模式选择器
+        pageModeSegmentedControl = UISegmentedControl(items: ["透明模式", "品牌模式"])
+        pageModeSegmentedControl.selectedSegmentIndex = 1 // 默认选择品牌模式
+        pageModeSegmentedControl.backgroundColor = UIColor.systemGray6
+        pageModeSegmentedControl.selectedSegmentTintColor = UIColor.systemBlue
+        pageModeSegmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
+        pageModeSegmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        
         // 创建日志视图
         logTextView = UITextView()
         logTextView.backgroundColor = UIColor.systemGray6
@@ -56,6 +65,7 @@ class ViewController: UIViewController {
         
         // 添加子视图
         view.addSubview(usernameTextField)
+        view.addSubview(pageModeSegmentedControl)
         view.addSubview(loginButton)
         view.addSubview(registerButton)
         view.addSubview(logTextView)
@@ -68,8 +78,14 @@ class ViewController: UIViewController {
             usernameTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
             usernameTextField.heightAnchor.constraint(equalToConstant: 44),
             
+            // 页面模式选择器
+            pageModeSegmentedControl.topAnchor.constraint(equalTo: usernameTextField.bottomAnchor, constant: 20),
+            pageModeSegmentedControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            pageModeSegmentedControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+            pageModeSegmentedControl.heightAnchor.constraint(equalToConstant: 32),
+            
             // 登录按钮
-            loginButton.topAnchor.constraint(equalTo: usernameTextField.bottomAnchor, constant: 20),
+            loginButton.topAnchor.constraint(equalTo: pageModeSegmentedControl.bottomAnchor, constant: 20),
             loginButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
             loginButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
             loginButton.heightAnchor.constraint(equalToConstant: 50),
@@ -90,6 +106,7 @@ class ViewController: UIViewController {
         // 添加日志
         addLog("🚀 Passkey Demo 应用启动")
         addLog("🔍 检查当前状态...")
+        addLog("📱 当前页面模式: \(AuthManager.shared.getCurrentPageMode() == .branded ? "品牌模式" : "透明模式")")
     }
     
     // MARK: - Actions
@@ -99,8 +116,13 @@ class ViewController: UIViewController {
             return
         }
         
+        // 更新页面模式
+        let selectedMode = pageModeSegmentedControl.selectedSegmentIndex == 0 ? AuthManager.PageMode.transparent : AuthManager.PageMode.branded
+        AuthManager.shared.setPageMode(selectedMode)
+        
         addLog("🚀 开始 Passkey 登录流程...")
         addLog("👤 用户名: \(username)")
+        addLog("📱 页面模式: \(selectedMode == .branded ? "品牌模式" : "透明模式")")
         
         // 禁用按钮防止重复点击
         loginButton.isEnabled = false
@@ -132,21 +154,34 @@ class ViewController: UIViewController {
             return
         }
         
+        // 更新页面模式
+        let selectedMode = pageModeSegmentedControl.selectedSegmentIndex == 0 ? AuthManager.PageMode.transparent : AuthManager.PageMode.branded
+        AuthManager.shared.setPageMode(selectedMode)
+        
         addLog("📝 开始 Passkey 注册流程...")
         addLog("👤 用户名: \(username)")
+        addLog("📱 页面模式: \(selectedMode == .branded ? "品牌模式" : "透明模式")")
         
         // 禁用按钮防止重复点击
         registerButton.isEnabled = false
         registerButton.setTitle("🔄 注册中...", for: .normal)
         
-        // 模拟注册流程
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.registerButton.isEnabled = true
-            self?.registerButton.setTitle("📝 注册 Passkey", for: .normal)
-            
-            self?.addLog("✅ 注册成功!")
-            self?.addLog("🔐 Passkey 已保存到设备")
-            self?.showAlert(title: "注册成功", message: "Passkey 注册完成！")
+        AuthManager.shared.startRegistration(username: username) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.registerButton.isEnabled = true
+                self?.registerButton.setTitle("📝 注册 Passkey", for: .normal)
+                
+                switch result {
+                case .success:
+                    self?.addLog("✅ 注册成功!")
+                    self?.addLog("🔐 Passkey 已保存到设备")
+                    self?.showAlert(title: "注册成功", message: "Passkey 注册完成！")
+                    
+                case .failure(let error):
+                    self?.addLog("❌ 注册失败: \(error.localizedDescription)")
+                    self?.showAlert(title: "注册失败", message: error.localizedDescription)
+                }
+            }
         }
     }
     
