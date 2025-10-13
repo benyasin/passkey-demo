@@ -138,7 +138,13 @@ class ViewController: UIViewController {
                     self?.addLog("✅ 登录成功!")
                     self?.addLog("🎫 Access Token: \(authResult.accessToken.prefix(20))...")
                     self?.addLog("⏰ 过期时间: \(authResult.expiresIn) 秒")
-                    self?.showAlert(title: "登录成功", message: "Passkey 认证成功完成！")
+                    
+                    // 保存用户信息
+                    UserDefaults.standard.set(authResult.accessToken, forKey: "userToken")
+                    UserDefaults.standard.set(username, forKey: "username")
+                    
+                    // 跳转到首页
+                    self?.navigateToHome(username: username)
                     
                 case .failure(let error):
                     self?.addLog("❌ 登录失败: \(error.localizedDescription)")
@@ -198,6 +204,170 @@ class ViewController: UIViewController {
     
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "确定", style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func navigateToHome(username: String) {
+        // 显示登录成功后的首页界面
+        showHomeInterface(username: username)
+    }
+    
+    private func showHomeInterface(username: String) {
+        // 隐藏登录注册按钮
+        loginButton.isHidden = true
+        registerButton.isHidden = true
+        usernameTextField.isHidden = true
+        pageModeSegmentedControl.isHidden = true
+        
+        // 显示首页内容
+        showHomeContent(username: username)
+    }
+    
+    private func showHomeContent(username: String) {
+        // 清除日志
+        logTextView.text = ""
+        
+        // 添加首页内容
+        addLog("🏠 欢迎使用 Passkey Demo")
+        addLog("👤 用户: \(username)")
+        addLog("✅ 已通过生物识别认证")
+        addLog("")
+        addLog("🔐 安全状态: 已认证")
+        addLog("⏰ 登录时间: \(DateFormatter.logFormatter.string(from: Date()))")
+        addLog("")
+        addLog("🎉 登录成功！您现在可以安全地使用应用")
+        
+        // 创建首页布局
+        setupHomeLayout(username: username)
+    }
+    
+    private func setupHomeLayout(username: String) {
+        // 创建欢迎标题
+        let welcomeLabel = UILabel()
+        welcomeLabel.text = "欢迎回来！"
+        welcomeLabel.font = UIFont.systemFont(ofSize: 28, weight: .bold)
+        welcomeLabel.textColor = .label
+        welcomeLabel.textAlignment = .center
+        welcomeLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        // 创建用户信息标签
+        let userLabel = UILabel()
+        userLabel.text = "👤 \(username)"
+        userLabel.font = UIFont.systemFont(ofSize: 20, weight: .medium)
+        userLabel.textColor = .secondaryLabel
+        userLabel.textAlignment = .center
+        userLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        // 创建状态标签
+        let statusLabel = UILabel()
+        statusLabel.text = "✅ 已通过生物识别认证"
+        statusLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        statusLabel.textColor = .systemGreen
+        statusLabel.textAlignment = .center
+        statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        // 创建登出按钮
+        let logoutButton = UIButton(type: .system)
+        logoutButton.setTitle("🚪 登出", for: .normal)
+        logoutButton.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
+        logoutButton.backgroundColor = UIColor.systemRed
+        logoutButton.setTitleColor(.white, for: .normal)
+        logoutButton.layer.cornerRadius = 12
+        logoutButton.translatesAutoresizingMaskIntoConstraints = false
+        logoutButton.addTarget(self, action: #selector(logoutButtonTapped), for: .touchUpInside)
+        
+        // 添加子视图
+        view.addSubview(welcomeLabel)
+        view.addSubview(userLabel)
+        view.addSubview(statusLabel)
+        view.addSubview(logoutButton)
+        
+        // 设置约束
+        NSLayoutConstraint.activate([
+            // 欢迎标题
+            welcomeLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            welcomeLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60),
+            welcomeLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
+            welcomeLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20),
+            
+            // 用户信息
+            userLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            userLabel.topAnchor.constraint(equalTo: welcomeLabel.bottomAnchor, constant: 20),
+            userLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
+            userLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20),
+            
+            // 状态标签
+            statusLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            statusLabel.topAnchor.constraint(equalTo: userLabel.bottomAnchor, constant: 30),
+            statusLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
+            statusLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20),
+            
+            // 登出按钮
+            logoutButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            logoutButton.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 60),
+            logoutButton.widthAnchor.constraint(equalToConstant: 200),
+            logoutButton.heightAnchor.constraint(equalToConstant: 50),
+            
+            // 日志视图调整
+            logTextView.topAnchor.constraint(equalTo: logoutButton.bottomAnchor, constant: 40),
+            logTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            logTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            logTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
+        ])
+    }
+    
+    @objc private func logoutButtonTapped() {
+        let alert = UIAlertController(
+            title: "确认登出",
+            message: "您确定要登出吗？",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "取消", style: .cancel))
+        alert.addAction(UIAlertAction(title: "登出", style: .destructive) { [weak self] _ in
+            self?.performLogout()
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    private func performLogout() {
+        // 清除用户数据
+        UserDefaults.standard.removeObject(forKey: "userToken")
+        UserDefaults.standard.removeObject(forKey: "username")
+        
+        // 恢复登录界面
+        loginButton.isHidden = false
+        registerButton.isHidden = false
+        usernameTextField.isHidden = false
+        pageModeSegmentedControl.isHidden = false
+        
+        // 移除首页UI元素
+        view.subviews.forEach { subview in
+            if let button = subview as? UIButton, button.titleLabel?.text?.contains("登出") == true {
+                button.removeFromSuperview()
+            } else if let label = subview as? UILabel, 
+                      label.text?.contains("欢迎回来") == true || 
+                      label.text?.contains("👤") == true || 
+                      label.text?.contains("已通过生物识别认证") == true {
+                label.removeFromSuperview()
+            }
+        }
+        
+        // 清除日志并显示欢迎信息
+        logTextView.text = ""
+        addLog("🚀 Passkey Demo 应用启动")
+        addLog("🔍 检查当前状态...")
+        addLog("📱 当前页面模式: \(AuthManager.shared.getCurrentPageMode() == .branded ? "品牌模式" : "透明模式")")
+        
+        // 显示登出成功提示
+        let alert = UIAlertController(
+            title: "登出成功",
+            message: "您已成功登出",
+            preferredStyle: .alert
+        )
+        
         alert.addAction(UIAlertAction(title: "确定", style: .default))
         present(alert, animated: true)
     }

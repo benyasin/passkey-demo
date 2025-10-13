@@ -172,17 +172,22 @@
                 // 3. 调用 WebAuthn API 创建凭证
                 showLoading('请使用 Face ID 或 Touch ID 完成注册...');
                 
-                // 添加延迟确保用户看到提示，并确保页面完全加载
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // 添加延迟确保页面完全加载
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 
                 console.log('准备调用 WebAuthn API 创建凭证，选项:', opts);
+                
+                // 检查 WebAuthn 支持
+                if (!window.PublicKeyCredential) {
+                    showError('此设备不支持 WebAuthn');
+                    return;
+                }
                 
                 // 直接调用 WebAuthn API
                 const attResp = await navigator.credentials.create({ 
                     publicKey: {
                         ...opts,
-                        timeout: 60000, // 60秒超时
-                        userVerification: 'required'
+                        timeout: 60000 // 60秒超时
                     }
                 });
                 
@@ -282,8 +287,8 @@
                 // 3. 调用 WebAuthn API 获取认证
                 showLoading('请使用 Face ID 或 Touch ID 完成登录...');
                 
-                // 添加延迟确保用户看到提示，并确保页面完全加载
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // 添加延迟确保页面完全加载
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 
                 console.log('准备调用 WebAuthn API，选项:', opts);
                 
@@ -291,8 +296,7 @@
                 const authResp = await navigator.credentials.get({ 
                     publicKey: {
                         ...opts,
-                        timeout: 60000, // 60秒超时
-                        userVerification: 'required'
+                        timeout: 60000 // 60秒超时
                     }
                 });
                 

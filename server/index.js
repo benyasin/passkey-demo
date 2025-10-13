@@ -44,6 +44,16 @@ app.post('/webauthn/registration/options', async (req, res) => {
   console.log(`[注册] 用户: ${username}`);
   const user = getUser(username);
 
+  // 如果用户已经有凭证，提示使用登录功能
+  if (user.credentials && user.credentials.length > 0) {
+    console.log(`[注册] 用户 ${username} 已有凭证，提示使用登录功能`);
+    return res.status(400).json({ 
+      error: '用户已注册，请使用登录功能',
+      code: 'USER_ALREADY_REGISTERED',
+      hasCredentials: true
+    });
+  }
+
   const options = await generateRegistrationOptions({
     rpName: 'Passkey Demo',
     rpID,
@@ -52,14 +62,10 @@ app.post('/webauthn/registration/options', async (req, res) => {
     userDisplayName: displayName || user.username,
     attestationType: 'none',
     authenticatorSelection: {
-      residentKey: 'required',
-      userVerification: 'required',
-      // 移除 authenticatorAttachment 限制，让系统自动选择
+      residentKey: 'discouraged',
+      userVerification: 'discouraged'
     },
-    excludeCredentials: user.credentials.map(cred => ({
-      id: Buffer.from(cred.credentialID, 'base64url'),
-      type: 'public-key',
-    })),
+    excludeCredentials: [], // 新用户不需要排除任何凭证
   });
 
   db.challenges.set(username, options.challenge);
@@ -117,7 +123,7 @@ app.post('/webauthn/authentication/options', async (req, res) => {
   console.log(`[登录] 用户: ${username}, 可用凭证数: ${allowCreds.length}`);
   const options = await generateAuthenticationOptions({
     rpID,
-    userVerification: 'required',
+    userVerification: 'preferred',
     allowCredentials: allowCreds.length ? allowCreds : undefined, // 无则允许发现式认证
   });
   db.challenges.set(username, options.challenge);
@@ -245,3 +251,4 @@ app.listen(port, () => {
   console.log(`   POST /oauth/token                     - 交换 token`);
   console.log(`   GET  /api/user                        - 获取用户信息`);
 });
+
