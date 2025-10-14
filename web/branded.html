@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全认证</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .auth-card {
+            background: white;
+            border-radius: 24px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1d1d1f;
+            margin-bottom: 12px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #86868b;
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+        
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #f0f9ff;
+            color: #0369a1;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 32px;
+        }
+        
+        .security-badge::before {
+            content: '🔒';
+            margin-right: 8px;
+        }
+        
+        .biometric-prompt {
+            background: #f8f9fa;
+            border: 2px dashed #e9ecef;
+            border-radius: 16px;
+            padding: 32px 24px;
+            margin-bottom: 32px;
+        }
+        
+        .biometric-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #34c759, #30d158);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .biometric-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+        
+        .biometric-subtitle {
+            font-size: 14px;
+            color: #86868b;
+        }
+        
+        .status {
+            font-size: 14px;
+            color: #86868b;
+            margin-top: 20px;
+        }
+        
+        .success {
+            color: #34c759;
+        }
+        
+        .error {
+            color: #ff3b30;
+        }
+        
+        .loading {
+            color: #007AFF;
+        }
+        
+        .footer {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #86868b;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo">🔐</div>
+        <div class="title">安全认证</div>
+        <div class="subtitle">为了您的账户安全，请完成身份验证</div>
+        
+        <div class="security-badge">银行级安全加密</div>
+        
+        <div class="biometric-prompt">
+            <div class="biometric-icon" id="biometricIcon">👆</div>
+            <div class="biometric-text" id="biometricText">请使用 Face ID 验证身份</div>
+            <div class="biometric-subtitle" id="biometricSubtitle">将手指放在 Touch ID 传感器上</div>
+        </div>
+        
+        <div class="status" id="status"></div>
+        
+        <div class="footer">
+            <div>Powered by WebAuthn 技术</div>
+            <div>您的生物信息仅用于本地验证，不会上传到服务器</div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3001';
+        
+        // 工具函数
+        function updateStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = type;
+        }
+        
+        function updateBiometricUI(icon, text, subtitle) {
+            document.getElementById('biometricIcon').textContent = icon;
+            document.getElementById('biometricText').textContent = text;
+            document.getElementById('biometricSubtitle').textContent = subtitle;
+        }
+        
+        function bufToBase64url(buf) {
+            return btoa(String.fromCharCode(...new Uint8Array(buf)))
+                .replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
+        }
+        
+        function base64urlToBuf(b64url) {
+            const pad = '='.repeat((4 - b64url.length % 4) % 4);
+            const b64 = (b64url + pad).replaceAll('-','+').replaceAll('_','/');
+            const raw = atob(b64);
+            const arr = new Uint8Array(raw.length);
+            for (let i=0;i<raw.length;i++) arr[i] = raw.charCodeAt(i);
+            return arr.buffer;
+        }
+
+        // 检查 WebAuthn 支持
+        function checkWebAuthnSupport() {
+            if (!window.PublicKeyCredential) {
+                updateBiometricUI('❌', '不支持生物识别', '当前设备不支持 WebAuthn 功能');
+                updateStatus('当前浏览器不支持 WebAuthn/Passkey 功能', 'error');
+                return false;
+            }
+            if (!navigator.credentials) {
+                updateBiometricUI('❌', '不支持生物识别', '当前设备不支持 Credentials API');
+                updateStatus('当前浏览器不支持 Credentials API', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // 执行注册流程
+        async function performRegistration(username) {
+            if (!checkWebAuthnSupport()) return;
+            
+            updateBiometricUI('🔐', '正在准备注册', '请稍候...');
+            updateStatus('正在准备注册 Passkey...', 'loading');
+            
+            try {
+                // 1. 获取注册选项
+                updateBiometricUI('⏳', '正在获取注册选项', '连接服务器中...');
+                const resp = await fetch(API + '/webauthn/registration/options', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, displayName: username }),
+                });
+                
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+                }
+                
+                const opts = await resp.json();
+                
+                // 2. 转换字段格式
+                opts.challenge = base64urlToBuf(opts.challenge);
+                opts.user.id = new TextEncoder().encode(opts.user.id);
+                if (opts.excludeCredentials) {
+                    opts.excludeCredentials = opts.excludeCredentials.map(c => ({
+                        ...c, id: base64urlToBuf(c.id)
+                    }));
+                }
+                
+                // 3. 调用 WebAuthn API 创建凭证
+                updateBiometricUI('🔐', '请使用 Face ID 或 Touch ID', '正在验证身份...');
+                updateStatus('请使用生物识别完成注册...', 'loading');
+                
+                // 添加延迟确保页面完全加载
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                console.log('准备调用 WebAuthn API 创建凭证，选项:', opts);
+                
+                // 直接调用 WebAuthn API
+                const attResp = await navigator.credentials.create({ 
+                    publicKey: {
+                        ...opts,
+                        timeout: 60000 // 60秒超时
+                    }
+                });
+                
+                console.log('WebAuthn API 响应:', attResp);
+                if (!attResp) {
+                    updateBiometricUI('❌', '用户取消注册', '请重试或返回应用');
+                    updateStatus('用户取消注册', 'error');
+                    return;
+                }
+                
+                // 4. 转换响应格式
+                updateBiometricUI('⏳', '正在验证注册信息', '请稍候...');
+                const clientDataJSON = bufToBase64url(attResp.response.clientDataJSON);
+                const attestationObject = bufToBase64url(attResp.response.attestationObject);
+                const data = {
+                    id: attResp.id,
+                    rawId: bufToBase64url(attResp.rawId),
+                    type: attResp.type,
+                    response: { clientDataJSON, attestationObject },
+                };
+                
+                // 5. 提交到后端验证
+                const v = await fetch(API + '/webauthn/registration/verify', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, attResp: data }),
+                }).then(r => r.json());
+                
+                if (v.verified) {
+                    updateBiometricUI('✅', '注册成功', 'Passkey 已保存到设备');
+                    updateStatus('Passkey 注册成功！', 'success');
+                    
+                    setTimeout(() => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const state = urlParams.get('state');
+                        if (state) {
+                            window.location.href = `passkeydemo://auth?success=true&state=${state}`;
+                        }
+                    }, 2000);
+                } else {
+                    updateBiometricUI('❌', '注册验证失败', '请重试');
+                    updateStatus('注册验证失败', 'error');
+                }
+                
+            } catch (error) {
+                console.error('注册错误:', error);
+                updateBiometricUI('❌', '注册失败', error.message);
+                updateStatus(`注册失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 执行登录流程
+        async function performLogin(username) {
+            if (!checkWebAuthnSupport()) return;
+            
+            updateBiometricUI('🔐', '正在准备登录', '请稍候...');
+            updateStatus('正在准备登录...', 'loading');
+            
+            try {
+                // 1. 获取认证选项
+                updateBiometricUI('⏳', '正在获取认证选项', '连接服务器中...');
+                const resp = await fetch(API + '/webauthn/authentication/options', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username }),
+                });
+                
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+                }
+                
+                const opts = await resp.json();
+                
+                // 2. 转换字段格式
+                opts.challenge = base64urlToBuf(opts.challenge);
+                if (opts.allowCredentials) {
+                    opts.allowCredentials = opts.allowCredentials.map(c => ({
+                        ...c, id: base64urlToBuf(c.id)
+                    }));
+                }
+                
+                // 3. 调用 WebAuthn API 获取认证
+                updateBiometricUI('🔐', '请使用 Face ID 或 Touch ID', '正在验证身份...');
+                updateStatus('请使用生物识别完成登录...', 'loading');
+                
+                // 添加延迟确保页面完全加载
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                console.log('准备调用 WebAuthn API，选项:', opts);
+                
+                // 直接调用 WebAuthn API
+                const authResp = await navigator.credentials.get({ 
+                    publicKey: {
+                        ...opts,
+                        timeout: 60000 // 60秒超时
+                    }
+                });
+                
+                console.log('WebAuthn API 响应:', authResp);
+                if (!authResp) {
+                    updateBiometricUI('❌', '用户取消登录', '请重试或返回应用');
+                    updateStatus('用户取消登录', 'error');
+                    return;
+                }
+                
+                // 4. 转换响应格式
+                updateBiometricUI('⏳', '正在验证登录信息', '请稍候...');
+                const data = {
+                    id: authResp.id,
+                    rawId: bufToBase64url(authResp.rawId),
+                    type: authResp.type,
+                    response: {
+                        clientDataJSON: bufToBase64url(authResp.response.clientDataJSON),
+                        authenticatorData: bufToBase64url(authResp.response.authenticatorData),
+                        signature: bufToBase64url(authResp.response.signature),
+                        userHandle: authResp.response.userHandle ? bufToBase64url(authResp.response.userHandle) : null,
+                    }
+                };
+                
+                // 5. 提交到后端验证
+                const v = await fetch(API + '/webauthn/authentication/verify', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, authResp: data }),
+                }).then(r => r.json());
+                
+                if (v.verified && v.code) {
+                    updateBiometricUI('✅', '登录成功', '正在返回应用...');
+                    updateStatus('登录成功！获得授权码', 'success');
+                    
+                    setTimeout(() => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const state = urlParams.get('state');
+                        if (state) {
+                            window.location.href = `passkeydemo://auth?code=${v.code}&state=${state}`;
+                        }
+                    }, 2000);
+                } else {
+                    updateBiometricUI('❌', '登录验证失败', '请重试');
+                    updateStatus('登录验证失败', 'error');
+                }
+                
+            } catch (error) {
+                console.error('登录错误:', error);
+                updateBiometricUI('❌', '登录失败', error.message);
+                updateStatus(`登录失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时自动执行认证流程
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('username');
+            const action = urlParams.get('action');
+            
+            if (!username) {
+                updateBiometricUI('❌', '缺少用户名参数', '请从应用重新开始');
+                updateStatus('缺少用户名参数', 'error');
+                return;
+            }
+            
+            if (!action) {
+                updateBiometricUI('❌', '缺少操作类型参数', '请从应用重新开始');
+                updateStatus('缺少操作类型参数', 'error');
+                return;
+            }
+            
+            // 根据操作类型执行相应流程
+            if (action === 'register') {
+                performRegistration(username);
+            } else if (action === 'login') {
+                performLogin(username);
+            } else {
+                updateBiometricUI('❌', '无效的操作类型', '请从应用重新开始');
+                updateStatus('无效的操作类型', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

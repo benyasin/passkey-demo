@@ -52,15 +52,6 @@ npm start
 
 ## 🔐 使用流程
 
-### Web 端演示
-
-1. 在 iOS Safari 中打开 `http://localhost:3001/index.html`
-2. 输入用户名（默认：demo_user）
-3. 点击"注册 Passkey"按钮
-4. 使用 Face ID/Touch ID 完成注册
-5. 点击"登录"按钮进行认证
-6. 使用 Face ID/Touch ID 完成登录
-
 ### iOS 应用演示
 
 1. 打开 iOS 应用
