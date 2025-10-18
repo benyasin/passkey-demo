@@ -35,6 +35,8 @@ app.use(express.json());
 
 // 静态文件服务（为前端页面提供服务）
 app.use(express.static('../web'));
+app.use('/index.html', express.static('../web/index.html'));
+app.use('/branded.html', express.static('../web/branded.html'));
 
 /** ============ 注册：生成注册 options ============ */
 app.post('/webauthn/registration/options', async (req, res) => {
