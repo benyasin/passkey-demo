@@ -139,13 +139,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         if (code) {
           console.log('登录成功，获得授权码:', code);
           onLoginSuccess(username, new Date().toLocaleString());
-          Alert.alert('成功', '登录成功！');
+          //Alert.alert('成功', '登录成功！');
         }
         // 处理注册成功（有 success=true 参数）
         else if (success === 'true') {
           console.log('注册成功');
           onLoginSuccess(username, new Date().toLocaleString());
-          Alert.alert('成功', '注册成功！');
+          //Alert.alert('成功', '注册成功！');
         } else {
           console.log('认证失败');
           Alert.alert('失败', '认证失败');
